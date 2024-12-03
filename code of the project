@@ -1,0 +1,61 @@
+#include <WiFi.h>
+#include <WiFiClientSecure.h> 
+#include <UniversalTelegramBot.h> 
+#include <ArduinoJson.h> 
+#include "DHT.h"
+
+int MQ_Pin = 33;
+int sensorData;
+int DHT_pin = 18;
+int flame_sensor = 27; 
+int Buzzer = 4;
+DHT dht(DHT_pin, DHT11);
+
+const char* ssid = "Youssef"; 
+const char* password = "123456789"; 
+ 
+#define BOTtoken "7185181397:AAEzANF6IPIt8tfw4ZikR9_rsE4HpxLrFik" 
+#define CHAT_ID "1357123181" 
+
+WiFiClientSecure client; 
+UniversalTelegramBot bot(BOTtoken, client); 
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(flame_sensor, INPUT);
+  pinMode(Buzzer, OUTPUT);
+  pinMode(MQ_Pin, INPUT);  
+  dht.begin();
+
+  WiFi.mode(WIFI_STA); 
+  WiFi.begin(ssid, password); 
+  client.setCACert(TELEGRAM_CERTIFICATE_ROOT);  
+
+  while (WiFi.status() != WL_CONNECTED) { 
+    delay(500); 
+  } 
+
+  bot.sendMessage(CHAT_ID, "Bot started up", ""); 
+}
+
+void loop() {
+  int flame_state = digitalRead(flame_sensor);
+  if (flame_state == LOW) {
+    digitalWrite(Buzzer, HIGH);
+    bot.sendMessage(CHAT_ID, "Fire detected", "");
+  } else {
+    digitalWrite(Buzzer, LOW);
+  }
+
+  float temp = dht.readTemperature();
+  if (!isnan(temp) && temp > 25) {
+    bot.sendMessage(CHAT_ID, "High temperature detected", "");
+  }
+
+  sensorData = analogRead(MQ_Pin);       
+  if (sensorData > 400) {
+    bot.sendMessage(CHAT_ID, "Poor air quality detected", "");
+  }
+
+  delay(2000);
+}
